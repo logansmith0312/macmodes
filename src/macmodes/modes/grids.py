@@ -20,15 +20,15 @@ def cheb_grid(Ntot: int, r0: float) -> np.ndarray[float]:
 def get_grid(Ntot: int, r0: float, gridflg: int) -> np.ndarray[float]:
     '''Defines either uniform or chebyshev grid'''
     if gridflg == 0:
-        r = uniform_grid(Ntot,r0,R_CMB)
+        r = uniform_grid(Ntot,r0)
     elif gridflg == 1:
-        r = cheb_grid(Ntot,r0,R_CMB)
+        r = cheb_grid(Ntot,r0)
     else:
         raise ValueError(f"Invalid value for gridflg '{gridflg}'")
     return r
 
      
-def get_grid_params(Ntot: int, r0: float,r: np.ndarray) -> list[np.ndarray[float]]:
+def get_grid_params(Ntot: int, r0: float,r: np.ndarray[float]) -> list[np.ndarray[float]]:
     '''Defines necessary derivative coefficients'''
     Nmax: int = Ntot - 1
         

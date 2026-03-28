@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from macmodes.constants import EK_PM
+from macmodes.constants import R_CMB, BR_SCALE, EK_PM
 
 @dataclass
 class ModeConfig:
 
-    n_rad: int = 101 # number of radial grid points
-    n_theta: int = 100 # number of colatitudinal grid points
-    ell_max: int = 4 # max spherical harmonic degree
+    n_rad: int = 3 # number of radial grid points
+    n_theta: int = 3 # number of colatitudinal grid points
+    ell_max: int = 2 # max spherical harmonic degree
 
     H: float = 140e3/R_CMB # dimensionless stratified layer thickness
     N_max: float = 0.84 # max value of dimensionles buoyancy frequency
@@ -15,19 +15,22 @@ class ModeConfig:
     Ek: float = EK_PM # ekman number (require Ek <= EK_PM for magnetic diffusion
                       # to dominate
 
-    delta_per_est: int # estimated period to compute guess of skin layer depth 
+    delta_per_est: int = 50 # estimated period to compute guess of skin layer depth 
     gridflg: int = 0 # 0 for uniform, 1 for chebyshev
+    iterate_delta_flg: int = 0 # number of iterations of solving eigenvalue
+                               # problem and recomputing delta
 
     solver_target_per: int = 30 # mode period in years as target for solver
-    nmodes: int = 30 # number of modes to compute and return
+    n_modes: int = 30 # number of modes to compute and return
+
+    def __post_init__(self):
+        if self.n_rad < 3:
+            raise ValueError(f"n_rad must be >= 3, got {self.n_rad}")
+        if self.n_theta < 3:
+            raise ValueError(f"n_theta must be >= 3, got {self.n_theta}")
+        if not (self.ell_max % 2) == 0:
+            raise ValueError(f"ell_max must be even, got {self.ell_max}")
 
 
+configtest = ModeConfig() #tests defaults
 
-
-
-
-
-
-
-
-    A, B = setup_mats(Nrad, r0, rmax, grid_params, Ek, Ntildemax, ellmax, Br, Ek_Pm, Cp, delta_tilde)

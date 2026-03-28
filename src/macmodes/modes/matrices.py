@@ -25,7 +25,7 @@ def setup_mats(r, grid_params, config):
     Nmax: int = n_rad - 1
     ell_max_h: int = ell_max//2
 
-    N: np.ndarray = get_N_linear(r, N_max, H)
+    N: np.ndarray[float] = get_N_linear(r, N_max, H)
 
     A = np.zeros((5*ell_max_h*n_rad, 5*ell_max_h*n_rad), dtype=complex)
     B = np.zeros((5*ell_max_h*n_rad, 5*ell_max_h*n_rad), dtype=complex)
@@ -56,7 +56,7 @@ def setup_mats(r, grid_params, config):
             A[kz, kz+1] = Ek*dr2c[k]
             
             # Buoyancy
-            A[kz, kd] = Ntilde[k]**2*ellpe*r_2[k]
+            A[kz, kd] = N[k]**2*ellpe*r_2[k]
             
             # Coriolis
             factCora = 2*(elle - 1)/elle
@@ -148,7 +148,7 @@ def setup_mats(r, grid_params, config):
         # pseudo vacuum bphi
         #A[kt, kt] = 1. 
         # match potential field of inner core for purely diffusive magnetic field
-        A[kt, kt] = r_1[k] - dr1a[k] + (1-1j)/delta_tilde
+        A[kt, kt] = r_1[k] - dr1a[k] + (1-1j)/delta
         A[kt, kt+1] = -dr1b[k]
         A[kt, kt+2] = -dr1c[k]
         A[kt, kp] = -Br_cmb/EK_PM

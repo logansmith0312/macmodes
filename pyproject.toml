@@ -8,6 +8,9 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "dataclasses",
+    "mpi4py",
+    "petsc4py",
+    "slepc4py",
 ]
 
 [build-system]
