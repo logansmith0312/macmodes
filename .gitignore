@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+0old/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info
+*.swp

@@ -1,0 +1,15 @@
+[project]
+name = "macmodes"
+version = "0.1.0"
+description = "Compute MAC modes in stratified layer in spherical geometry"
+authors = [{name = "Logan Smith"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "dataclasses",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
