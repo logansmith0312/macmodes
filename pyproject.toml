@@ -5,13 +5,6 @@ description = "Compute MAC modes in stratified layer in spherical geometry"
 authors = [{name = "Logan Smith"}]
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "numpy",
-    "dataclasses",
-    "mpi4py",
-    "petsc4py",
-    "slepc4py",
-]
 
 [build-system]
 requires = ["setuptools"]
