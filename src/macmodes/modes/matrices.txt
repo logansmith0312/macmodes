@@ -235,11 +235,11 @@ def setup_mats_petsc(r: np.ndarray[float],
             
             # initialize B diagonals with 0 so that every row has at least one 
             # entry (necessary for petsc matrices)
-            B.setValue(kz,kz,1e-10)
-            B.setValue(kw,kw,1e-10)
-            B.setValue(kd,kd,1e-10)
-            B.setValue(kp,kp,1e-10)
-            B.setValue(kt,kt,1e-10)
+            B.setValue(kz,kz,0)
+            B.setValue(kw,kw,0)
+            B.setValue(kd,kd,0)
+            B.setValue(kp,kp,0)
+            B.setValue(kt,kt,0)
 
             # zeta equations
             B.setValue(kz, kz, -1j)
@@ -331,11 +331,11 @@ def setup_mats_petsc(r: np.ndarray[float],
         
         # initialize B diagonals with 0 so that every row has at least one 
         # entry (necessary for petsc matrices)
-        B.setValue(kz,kz,1e-10)
-        B.setValue(kw,kw,1e-10)
-        B.setValue(kd,kd,1e-10)
-        B.setValue(kp,kp,1e-10)
-        B.setValue(kt,kt,1e-10)
+        B.setValue(kz,kz,0)
+        B.setValue(kw,kw,0)
+        B.setValue(kd,kd,0)
+        B.setValue(kp,kp,0)
+        B.setValue(kt,kt,0)
 
         # free slip vtheta
         A.setValue(kz, kz, 1.*dr[k]**2 )
@@ -366,11 +366,11 @@ def setup_mats_petsc(r: np.ndarray[float],
 
         # initialize B diagonals with 0 so that every row has at least one 
         # entry (necessary for petsc matrices)
-        B.setValue(kz,kz,1e-10)
-        B.setValue(kw,kw,1e-10)
-        B.setValue(kd,kd,1e-10)
-        B.setValue(kp,kp,1e-10)
-        B.setValue(kt,kt,1e-10)
+        B.setValue(kz,kz,0)
+        B.setValue(kw,kw,0)
+        B.setValue(kd,kd,0)
+        B.setValue(kp,kp,0)
+        B.setValue(kt,kt,0)
 
         # free slip vtheta
         A.setValue(kz, kz, 1.*dr[k]**2)

@@ -30,6 +30,8 @@ def get_grid(Ntot: int, r0: float, gridflg: int) -> np.ndarray[float]:
      
 def get_grid_params(Ntot: int, r0: float,r: np.ndarray[float]) -> list[np.ndarray[float]]:
     '''Defines necessary derivative coefficients'''
+    
+    print("get_grid_params: starting execution")
     Nmax: int = Ntot - 1
         
     dr = np.zeros(Ntot) # Radial stepsizes
@@ -90,6 +92,7 @@ def get_grid_params(Ntot: int, r0: float,r: np.ndarray[float]) -> list[np.ndarra
     dr2b[Nmax] =-2./(dr[Nmax]*dr[Nmax-1])
     dr2c[Nmax] = 2./(dr[Nmax-1] * (dr[Nmax]+dr[Nmax-1]))
     
+    print("get_grid_params: exiting")
     return dr, r_1, r_2, dr1a, dr1b, dr1c, dr2a, dr2b, dr2c
     
 

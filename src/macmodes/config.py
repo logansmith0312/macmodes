@@ -20,7 +20,6 @@ class ModeConfig:
     iterate_delta_flg: int = 0 # number of iterations of solving eigenvalue
                                # problem and recomputing delta
 
-    solver_target_per: int = 30 # mode period in years as target for solver
     n_modes: int = 30 # number of modes to compute and return
 
     def __post_init__(self):
