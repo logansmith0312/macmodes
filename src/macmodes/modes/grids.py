@@ -12,7 +12,7 @@ def cheb_grid(Ntot: int, r0: float) -> np.ndarray[float]:
     r: np.ndarray = np.zeros(Ntot)
     
     for k in range(1,Nmax):
-        r[k] = 0.5*(+r0)-0.5*(R_CMB-r0)*np.cos(k*np.pi/Nmax)
+        r[k] = 0.5*(R_CMB+r0)-0.5*(R_CMB-r0)*np.cos(k*np.pi/Nmax)
     r[0] = r0
     r[Nmax] = R_CMB
     return r

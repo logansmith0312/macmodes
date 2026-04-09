@@ -1,0 +1,125 @@
+Steps to download macmodes package and install dependencies:
+
+Prerequesites:
+- git
+- python3 
+- make 
+- cc
+- c++ 
+- gfortran
+
+To check c, c++ and fortran compilers (from PETSc docs):
+
+    printf '#include<stdio.h>\nint main(){printf("cc OK!\\n");}' > t.c && cc t.c && ./a.out && rm -f t.c a.out
+    printf '#include<iostream>\nint main(){std::cout<<"c++ OK!"<<std::endl;}' > t.cpp && c++ t.cpp && ./a.out && rm -f t.cpp a.out
+    printf 'program t\nprint"(a)","gfortran OK!"\nend program' > t.f90 && gfortran t.f90 && ./a.out && rm -f t.f90 a.out
+
+1. Clone github repo and cd there
+
+    git clone https://github.com/logansmith0312/macmodes
+    cd macmodes 
+    
+2. Create virtual enviroment 
+
+    python3 -m venv .venv
+
+3. Build PETSc 
+
+    3a. Clone source code:
+
+         git clone -b release https://gitlab.com/petsc/petsc.git petsc 
+    
+    3b. Configure installation: from top of PETSc source tree do:
+
+        python3 /path_to_macmodes/docs/reconfigure_petsc.py
+        
+        Alternatively, do:
+
+        ./configure --download-cmake --download-fblaslapack --download-metis --download-mpich --download-mumps --download-parmetis --download-scalapack --download-superlu_dist --with-scalar-type=complex
+  
+
+    3c. Follow prompts to compile and check installation 
+
+    3d. Ensure enviroment variables PETSC_DIR and PETSC_ARCH are set, can add 
+        them to .bashrc/.zshrc files, and prepend petsc bin to path:
+
+        (bash)
+        export PETSC_DIR='/path_to_petsc_dir'
+        export PETSC_ARCH='architecture_name'
+
+4. Build SLEPc
+
+    4a. Clone source code:
+
+        git clone -b release https://gitlab.com/slepc/slepc 
+
+    4b. Ensure enviroment variable SLEPC_DIR is set
+        
+        (bash)
+        export SLEPC_DIR='/path_to_slepc_dir'
+
+    4c. Configure installation: from top of SLEPc source tree do:
+
+        python3 /path_to_macmodes/docs/reconfigure_slepc.py
+
+        Alternatively, do:
+
+        ./configure 
+
+    4d. Follow prompts to compile and check installation 
+
+5. Install petsc4py from PETSc source tree
+
+    5a. Navigate to macmodes directory, and activate virtual enviroment:
+
+        source .venv/bin/activate
+
+    5b. Install numpy:
+
+        python3 -m pip install numpy
+
+    5c. Install petsc4py (before check that $PETSC_DIR, $PETSC_ARCH are set):
+
+        cd $PETSC_DIR
+        python3 -m pip install src/binding/petsc4py
+
+
+6. Install slepc4py from SLEPc source tree (before check that $PETSC_DIR, 
+   $PETSC_ARCH, $SLEPC_DIR are set)
+
+    cd $SLEPC_DIR
+    python3 -m pip install src/binding/slepc4py
+
+7. Install mpi4py
+
+    7a. Ensure this is built on PETSc's own installation of MPICH, set:
+        
+        (bash)
+        export MPICC=$PETSC_DIR/$PETSC_ARCH/bin/mpicc
+        
+    7b. Then install:
+
+        python3 -m pip install mpi4py
+
+    7c. Prepend petsc's bin to path (so you can call mpiexec and it defaults to
+        petsc's own installation):
+
+        (bash)
+        export PATH="$PETSC_DIR/$PETSC_ARCH/bin:$PATH"
+
+8. Install remaining dependencies and macmodes package itself:
+
+    cd /path_to_macmodes/
+    python3 -m pip install -e .
+
+Documentation:
+PETSc: https://petsc.org/release/install/download/
+SLEPc: https://slepc.upv.es/release/installation/download.html 
+petsc4py: https://petsc.org/release/petsc4py/install.html#
+slepc4py: https://slepc.upv.es/release/slepc4py/install.html#
+
+===============================================================================
+
+Usage of macmodes
+
+

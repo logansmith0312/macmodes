@@ -7,11 +7,21 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
-    "dataclasses",
+    "numpy",
     "scipy",
     "matplotlib",
+    "PySide6",
 ]
+
+[project.scripts]
+new_run="macmodes.scripts.new_run:main"
+build_config="macmodes.scripts.build_config:main"
+compute_modes="macmodes.scripts.compute_modes:main"
+mode_look="macmodes.scripts.mode_look:main"
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

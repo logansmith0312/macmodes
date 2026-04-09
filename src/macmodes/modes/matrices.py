@@ -1,28 +1,38 @@
 import numpy as np
 from petsc4py import PETSc
-from macmodes.config import ModeConfig
-from macmodes.constants import R_CMB, EK_PM, CP
-from macmodes.modes.physics import get_delta, get_N_linear
+from macmodes.config import ModeParams, ModeFlags
+from macmodes.constants import SECONDS_PER_YEAR, ETA, R_CMB_DIM, R_CMB, EK_PM, CP
 
 def c(ell: int) -> float:
     '''Coriolis coefficient'''
     return  np.sqrt( ell**2 / ((2*ell-1) * (2*ell+1)) )
 
+def get_delta(period_years: int) -> float:
+    '''given mode period in years returns skin layer depth'''
+    freq = 2 * np.pi/(period_years*SECONDS_PER_YEAR)
+    delta = np.sqrt(2*ETA/freq)
+    return delta/R_CMB_DIM
+
+# Linearly varying Buoyancy frequency
+def get_N_linear(r, N_max, H):
+    return N_max * ( (r-(1-H)) / H )
 
 # Matrices
-def setup_mats(r, grid_params, config):
+def setup_mats(r, grid_params, params, flags):
 
-    n_rad: int = config.n_rad
-    ell_max: int = config.ell_max
-    H: float = config.H
-    N_max: float = config.N_max
-    Br_cmb: float = config.Br_cmb
-    Ek: float = config.Ek
-    delta_per_est: int = config.delta_per_est
+    n_rad: int = params.n_rad
+    ell_max: int = params.ell_max
+    H: float = params.H
+    N_max: float = params.N_max
+    Br_cmb: float = params.Br_cmb
+    Ek: float = params.Ek
+    delta_per_est: int = params.delta_per_est
+
 
     r0: float = R_CMB - H
     delta = get_delta(delta_per_est)
 
+    print(f"setup_mats: r0: {r0}, delta: {delta}")
     dr, r_1, r_2, dr1a, dr1b, dr1c, dr2a, dr2b, dr2c = grid_params
     Nmax: int = n_rad - 1
     ell_max_h: int = ell_max//2
@@ -183,20 +193,30 @@ def setup_mats(r, grid_params, config):
 
 def setup_mats_petsc(r: np.ndarray[float],
                      grid_params: tuple[np.ndarray[float]],
-                     config: ModeConfig) -> tuple[PETSc.Mat]:
+                     params: ModeParams,
+                     flags: ModeFlags) -> tuple[PETSc.Mat]:
 
     print("setup_mats_petsc: starting execution")
 
-    n_rad: int = config.n_rad
-    ell_max: int = config.ell_max
-    H: float = config.H
-    N_max: float = config.N_max
-    Br_cmb: float = config.Br_cmb
-    Ek: float = config.Ek
-    delta_per_est: int = config.delta_per_est
+    n_rad: int = params.n_rad
+    ell_max: int = params.ell_max
+    H: float = params.H
+    N_max: float = params.N_max
+    Br_cmb: float = params.Br_cmb
+    Ek: float = params.Ek
+    delta_per_est: int = params.delta_per_est
+
+    inner_bdry_flg = flags.inner_bdry_flg
+    outer_bdry_flg = flags.outer_bdry_flg
 
     r0: float = R_CMB - H
     delta = get_delta(delta_per_est)
+
+    print(f"setup_mats: n_rad: {n_rad}, ell_max: {ell_max}")
+    print(f"setup_mats: H: {H}, N_max: {N_max}")
+    print(f"setup_mats: Br_cmb: {Br_cmb}, Ek: {Ek}, delta_per_est: {delta_per_est}")
+    print(f"setup_mats: delta: {delta}")
+    print(f"r0: {r0}")
 
     dr, r_1, r_2, dr1a, dr1b, dr1c, dr2a, dr2b, dr2c = grid_params
     Nmax: int = n_rad - 1
@@ -233,13 +253,19 @@ def setup_mats_petsc(r: np.ndarray[float],
             kpr = kp + n_rad # Z right spherical harmonic index
             kt = kp + ell_max_h*n_rad
             
-            # initialize B diagonals with 0 so that every row has at least one 
-            # entry (necessary for petsc matrices)
-            B.setValue(kz,kz,1e-10)
-            B.setValue(kw,kw,1e-10)
-            B.setValue(kd,kd,1e-10)
-            B.setValue(kp,kp,1e-10)
-            B.setValue(kt,kt,1e-10)
+            # initialize A and B diagonals with 0 so that every row has at least one 
+            # entry (necessary for certain SLEPc solver neku matrices)
+            A.setValue(kz,kz,0.0)
+            A.setValue(kw,kw,0.0)
+            A.setValue(kd,kd,0.0)
+            A.setValue(kp,kp,0.0)
+            A.setValue(kt,kt,0.0)
+
+            B.setValue(kz,kz,0.0)
+            B.setValue(kw,kw,0.0)
+            B.setValue(kd,kd,0.0)
+            B.setValue(kp,kp,0.0)
+            B.setValue(kt,kt,0.0)
 
             # zeta equations
             B.setValue(kz, kz, -1j)
@@ -329,16 +355,23 @@ def setup_mats_petsc(r: np.ndarray[float],
         kp = kd + ell_max_h*n_rad
         kt = kp + ell_max_h*n_rad
         
-        # initialize B diagonals with 0 so that every row has at least one 
+        # initialize A and B diagonals with 0 so that every row has at least one 
         # entry (necessary for petsc matrices)
-        B.setValue(kz,kz,1e-10)
-        B.setValue(kw,kw,1e-10)
-        B.setValue(kd,kd,1e-10)
-        B.setValue(kp,kp,1e-10)
-        B.setValue(kt,kt,1e-10)
+        A.setValue(kz,kz,0.0)
+        A.setValue(kw,kw,0.0)
+        A.setValue(kd,kd,0.0)
+        A.setValue(kp,kp,0.0)
+        A.setValue(kt,kt,0.0)
+
+        B.setValue(kz,kz,0.0)
+        B.setValue(kw,kw,0.0)
+        B.setValue(kd,kd,0.0)
+        B.setValue(kp,kp,0.0)
+        B.setValue(kt,kt,0.0)
 
         # free slip vtheta
         A.setValue(kz, kz, 1.*dr[k]**2 )
+        print(f"kz,kz: ({kz},{kz})")
         A.setValue(kz, kw+1, -1. + (1.-dr[k]*r_1[k]) / (1.+dr[k]*r_1[k]))
         # no normal flow vr
         A.setValue(kw, kw, 1. )
@@ -347,13 +380,16 @@ def setup_mats_petsc(r: np.ndarray[float],
         A.setValue(kp, kp, dr1a[k] - 2*r_1[k] )
         A.setValue(kp, kp+1, dr1b[k])
         A.setValue(kp, kp+2, dr1c[k])
-        # pseudo vacuum bphi
-        #A.setValue(kt, kt, 1. )
-        # match potential field of inner core for purely diffusive magnetic field
-        A.setValue(kt, kt, r_1[k] - dr1a[k] + (1-1j)/delta)
-        A.setValue(kt, kt+1, -dr1b[k])
-        A.setValue(kt, kt+2, -dr1c[k])
-        A.setValue(kt, kp, -Br_cmb/EK_PM)
+
+        if inner_bdry_flg == 0:
+            # pseudo vacuum bphi
+            A.setValue(kt, kt, 1. )
+        elif inner_bdry_flg == 1:
+            # match potential field of inner core for purely diffusive magnetic field
+            A.setValue(kt, kt, r_1[k] - dr1a[k] + (1-1j)/delta)
+            A.setValue(kt, kt+1, -dr1b[k])
+            A.setValue(kt, kt+2, -dr1c[k])
+            A.setValue(kt, kp, -Br_cmb/EK_PM)
         
         
         # Boundary conditions at r=R_CMB
@@ -364,13 +400,19 @@ def setup_mats_petsc(r: np.ndarray[float],
         kp = kd + ell_max_h*n_rad
         kt = kp + ell_max_h*n_rad
 
-        # initialize B diagonals with 0 so that every row has at least one 
+        # initialize A and B diagonals with 0 so that every row has at least one 
         # entry (necessary for petsc matrices)
-        B.setValue(kz,kz,1e-10)
-        B.setValue(kw,kw,1e-10)
-        B.setValue(kd,kd,1e-10)
-        B.setValue(kp,kp,1e-10)
-        B.setValue(kt,kt,1e-10)
+        A.setValue(kz,kz,0.0)
+        A.setValue(kw,kw,0.0)
+        A.setValue(kd,kd,0.0)
+        A.setValue(kp,kp,0.0)
+        A.setValue(kt,kt,0.0)
+
+        B.setValue(kz,kz,0.0)
+        B.setValue(kw,kw,0.0)
+        B.setValue(kd,kd,0.0)
+        B.setValue(kp,kp,0.0)
+        B.setValue(kt,kt,0.0)
 
         # free slip vtheta
         A.setValue(kz, kz, 1.*dr[k]**2)
@@ -382,10 +424,12 @@ def setup_mats_petsc(r: np.ndarray[float],
         A.setValue(kp, kp, dr1a[k] - 2*r_1[k])
         A.setValue(kp, kp-1, dr1b[k])
         A.setValue(kp, kp-2, dr1c[k])
-        #pseudo vacuum bphi
+
         A.setValue(kt, kt, 1.)
-        # For EM coupling at mantle:
-        #A.setValue(kt, kp, CP*Br_cmb )
+
+        if outer_bdry_flg == 1:
+            # For EM coupling at mantle:
+            A.setValue(kt, kp, CP*Br_cmb )
         
     A.assemble()
     B.assemble()
@@ -393,6 +437,258 @@ def setup_mats_petsc(r: np.ndarray[float],
     print("setup_mats_petsc: exiting")
     return A, B
 
+def setup_mats_petsc_p(r: np.ndarray[float],
+                     grid_params: tuple[np.ndarray[float]],
+                     params: ModeParams,
+                     flags: ModeFlags) -> tuple[PETSc.Mat]:
+
+    rank = PETSc.COMM_WORLD.getRank()
+
+    if rank == 0:
+        print("setup_mats_petsc_p: starting execution")
+
+    n_rad: int = params.n_rad
+    ell_max: int = params.ell_max
+    H: float = params.H
+    N_max: float = params.N_max
+    Br_cmb: float = params.Br_cmb
+    Ek: float = params.Ek
+    delta_per_est: int = params.delta_per_est
+
+    inner_bdry_flg = flags.inner_bdry_flg
+    outer_bdry_flg = flags.outer_bdry_flg
+
+    r0: float = R_CMB - H
+    delta = get_delta(delta_per_est)
+
+    #print(f"setup_mats: n_rad: {n_rad}, ell_max: {ell_max}")
+    #print(f"setup_mats: H: {H}, N_max: {N_max}")
+    #print(f"setup_mats: Br_cmb: {Br_cmb}, Ek: {Ek}, delta_per_est: {delta_per_est}")
+    #print(f"setup_mats: delta: {delta}")
+    #print(f"r0: {r0}")
+
+    dr, r_1, r_2, dr1a, dr1b, dr1c, dr2a, dr2b, dr2c = grid_params
+    Nmax: int = n_rad - 1
+    ell_max_h: int = ell_max//2
+
+    N: np.ndarray[float] = get_N_linear(r, N_max, H)
+
+    A = PETSc.Mat().create()
+    A.setSizes([5*ell_max_h*n_rad,5*ell_max_h*n_rad])
+    A.setFromOptions()
+    A.setType('aij')
+
+    B = PETSc.Mat().create()
+    B.setSizes([5*ell_max_h*n_rad,5*ell_max_h*n_rad])
+    B.setFromOptions()
+    B.setType('aij')
+
+    A.setUp()
+    B.setUp()
+
+    # parallel ownership
+    Istart, Iend = A.getOwnershipRange()
+    print(f"setup_mats_petsc_p: Rank {rank} owns rows [{Istart}, {Iend})")    
+
+    def owns(row: int) -> bool:
+        return Istart <= row < Iend
+
+    for nl in range(ell_max_h):
+        ello = 2*nl+1 # odd degree spherical harmonic
+        ellpo = ello*(ello+1) # odd degree factor ell*(ell+1)
+        elle = 2*nl+2 # even degree spherical harmonic
+        ellpe = elle*(elle+1) # even degree factor ell*(ell+1)
+        
+        for k in range(1, Nmax):
+            kz = k + nl*n_rad # zeta index
+            kw = kz + ell_max_h*n_rad # W index
+            kwl = kw - n_rad # W left spherical harmonic index
+            kwr = kw  # W right spherical harmonic index
+            kd = kw + ell_max_h*n_rad # D index
+            kp = kd + ell_max_h*n_rad # Z index
+            kpl = kp # Z left spherical harmonic index
+            kpr = kp + n_rad # Z right spherical harmonic index
+            kt = kp + ell_max_h*n_rad
+            
+            # initialize A and B diagonals with 0 so that every row has at least one 
+            # entry (necessary for certain SLEPc solver neku matrices)
+
+            for row in (kz, kw, kd, kp, kt):
+                if owns(row):
+                    A.setValue(row,row,0.0)
+                    B.setValue(row,row,0.0)
+            
+            # zeta equations
+            if owns(kz):
+                B.setValue(kz, kz, -1j)
+            
+                # Diffusion
+                A.setValue(kz, kz-1, Ek*dr2a[k])
+                A.setValue(kz, kz, Ek*(dr2b[k] - ellpe*r_2[k]))
+                A.setValue(kz, kz+1, Ek*dr2c[k])
+            
+                # Buoyancy
+                A.setValue(kz, kd, N[k]**2*ellpe*r_2[k])
+                
+                # Coriolis
+                factCora = 2*(elle - 1)/elle
+                clea = c(elle)
+                A.setValue(kz, kpl-1, - factCora * clea * dr1a[k])
+                A.setValue(kz, kpl, - factCora * clea * (dr1b[k] - elle*r_1[k]))
+                A.setValue(kz, kpl+1, - factCora * clea * dr1c[k])
+                
+                factCorb = 2*(elle+2)/(elle+1)
+                if elle != ell_max: # Truncate: do not include ell_max+1 spherical harmonic part when ell=ell_max
+                    cleb = c(elle+1)
+                    A.setValue(kz, kpr-1, - factCorb * cleb * dr1a[k])
+                    A.setValue(kz, kpr, - factCorb * cleb * (dr1b[k] + (elle + 1)*r_1[k]))
+                    A.setValue(kz, kpr+1, - factCorb * cleb * dr1c[k])
+                
+            # W equations (no time derivative part)
+            if owns(kw): 
+                # Laplacian part
+                A.setValue(kw, kw-1, dr2a[k])
+                A.setValue(kw, kw, dr2b[k] - ellpe*r_2[k])
+                A.setValue(kw, kw+1, dr2c[k])
+                
+                # zeta part
+                A.setValue(kw, kz, -1.)
+            
+            # D equations 
+            if owns(kd):
+                B.setValue(kd, kd, -1j)
+                A.setValue(kd, kw, 1.)
+            
+            # Z equations
+            if owns(kp):
+                B.setValue(kp, kp, -1j)
+                
+                # Diffusion
+                A.setValue(kp, kp-1, Ek*dr2a[k])
+                A.setValue(kp, kp, Ek*(dr2b[k] - ellpo*r_2[k]))
+                A.setValue(kp, kp+1, Ek*dr2c[k])
+                
+                # Coriolis
+                factCora = 2*(ello - 1)/ello
+                if ello != 1: # Truncate: do not include ell=0 spherical harmonic part when ell=1
+                    cloa = c(ello)
+                    A.setValue(kp, kwl-1, factCora * cloa * dr1a[k])
+                    A.setValue(kp, kwl, factCora * cloa * (dr1b[k] - ello*r_1[k]))
+                    A.setValue(kp, kwl+1, factCora * cloa * dr1c[k])
+                    
+                factCorb = 2*(ello+2)/(ello+1)
+                clob = c(ello+1)
+                A.setValue(kp, kwr-1, factCorb * clob * dr1a[k])
+                A.setValue(kp, kwr, factCorb * clob * (dr1b[k] + (ello+1)*r_1[k]))
+                A.setValue(kp, kwr+1, factCorb * clob * dr1c[k])
+                
+                # Lorentz
+                A.setValue(kp, kt-1, Br_cmb * dr1a[k])
+                A.setValue(kp, kt, Br_cmb * dr1b[k])
+                A.setValue(kp, kt+1, Br_cmb * dr1c[k])
+            
+            # tau equations
+            if owns(kt):
+                B.setValue(kt, kt, -1j)
+                
+                # Diffusion
+                A.setValue(kt, kt-1, EK_PM*dr2a[k])
+                A.setValue(kt, kt, EK_PM*(dr2b[k]-ellpo*r_2[k]) )
+                A.setValue(kt, kt+1, EK_PM*dr2c[k])
+                
+                # Advection
+                A.setValue(kt, kp-1, Br_cmb*dr1a[k])
+                A.setValue(kt, kp, Br_cmb*dr1b[k])
+                A.setValue(kt, kp+1, Br_cmb*dr1c[k])
+            
+        
+        # Boundary conditions at r=r0
+        k=0
+        kz = nl*n_rad
+        kw = kz + ell_max_h*n_rad
+        kd = kw + ell_max_h*n_rad
+        kp = kd + ell_max_h*n_rad
+        kt = kp + ell_max_h*n_rad
+        
+        # initialize A and B diagonals with 0 so that every row has at least one 
+        # entry (necessary for petsc matrices)
+        for row in (kz, kw, kd, kp, kt):
+            if owns(row):
+                A.setValue(row, row, 0.0)
+                B.setValue(row, row, 0.0)
+
+        # free slip vtheta
+        if owns(kz):
+            A.setValue(kz, kz, 1.*dr[k]**2 )
+            A.setValue(kz, kw+1, -1. + (1.-dr[k]*r_1[k]) / (1.+dr[k]*r_1[k]))
+        
+        # no normal flow vr
+        if owns(kw):
+            A.setValue(kw, kw, 1. )
+        if owns(kd):
+            A.setValue(kd, kd, 1. )
+        # free slip vphi
+        if owns(kp):
+            A.setValue(kp, kp, dr1a[k] - 2*r_1[k] )
+            A.setValue(kp, kp+1, dr1b[k])
+            A.setValue(kp, kp+2, dr1c[k])
+        
+        if owns(kt):
+            if inner_bdry_flg == 0:
+            # pseudo vacuum bphi
+                A.setValue(kt, kt, 1. )
+            elif inner_bdry_flg == 1:
+            # match potential field of inner core for purely diffusive magnetic field
+                A.setValue(kt, kt, r_1[k] - dr1a[k] + (1-1j)/delta)
+                A.setValue(kt, kt+1, -dr1b[k])
+                A.setValue(kt, kt+2, -dr1c[k])
+                A.setValue(kt, kp, -Br_cmb/EK_PM)
+        
+        
+        # Boundary conditions at r=R_CMB
+        k=Nmax
+        kz = (nl+1)*n_rad - 1
+        kw = kz + ell_max_h*n_rad
+        kd = kw + ell_max_h*n_rad
+        kp = kd + ell_max_h*n_rad
+        kt = kp + ell_max_h*n_rad
+
+        # initialize A and B diagonals with 0 so that every row has at least one 
+        # entry (necessary for petsc matrices)
+        for row in (kz, kw, kd, kp, kt):
+            if owns(row):
+                A.setValue(row, row, 0.0)
+                B.setValue(row, row, 0.0)
+
+        # free slip vtheta
+        if owns(kz):
+            A.setValue(kz, kz, 1.*dr[k]**2)
+            A.setValue(kz, kw-1, -1. + (1.+dr[k]*r_1[k]) / (1.-dr[k]*r_1[k]))
+
+        # no normal flow vr
+        if owns(kw):
+            A.setValue(kw, kw, 1.)
+        if owns(kd):
+            A.setValue(kd, kd, 1.)
+
+        # free slip vphi
+        if owns(kp):
+            A.setValue(kp, kp, dr1a[k] - 2*r_1[k])
+            A.setValue(kp, kp-1, dr1b[k])
+            A.setValue(kp, kp-2, dr1c[k])
+        if owns(kt):
+            A.setValue(kt, kt, 1.)
+            if outer_bdry_flg == 1:
+                # For EM coupling at mantle:
+                A.setValue(kt, kp, CP*Br_cmb )
+        
+    A.assemble()
+    B.assemble()
+
+    if rank == 0:
+        print("setup_mats_petsc_p: exiting")
+
+    return A, B
 def numpy2petsc(A_np: np.ndarray[complex],
                 B_np: np.ndarray[complex],
                 A_petsc: PETSc.Mat,
